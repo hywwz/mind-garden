@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');const C=require('./core.js');
+const goal=(id,title='愿望')=>({id,title,skills:[{id:'s'+id,title:'能力',actions:[{id:'a'+id,title:'最小的一步'}]}]});
+const state=()=>C.empty();const base=state();base.data.goals=[goal('g1')];
+let l=C.copy(base),r=C.copy(base);l.data.goals[0].title='更自在';r.data.goals[0].skills[0].title='生活节奏';let merged=C.merge(base,l,r);assert.equal(merged.conflicts.length,0);assert.equal(merged.value.data.goals[0].title,'更自在');assert.equal(merged.value.data.goals[0].skills[0].title,'生活节奏');
+l=C.copy(base);r=C.copy(base);l.data.chores=[{id:'c1',title:'洗衣服'}];r.data.chores=[{id:'c2',title:'洗澡'}];merged=C.merge(base,l,r);assert.equal(merged.conflicts.length,0);assert.equal(merged.value.data.chores.length,2);
+l=C.copy(base);r=C.copy(base);l.data.goals=[];assert.equal(C.merge(base,l,r).value.data.goals.length,0);
+r.data.goals[0].title='另一台改过';assert(C.merge(base,l,r).conflicts.length);
+l=C.copy(base);r=C.copy(base);l.data.goals[0].title='甲';r.data.goals[0].title='乙';assert(C.merge(base,l,r).conflicts.length);
+l=C.copy(base);r=C.copy(base);l.data.goals=[];r.data.logs=[{id:'log',actionId:'ag1',created:1}];assert(C.merge(base,l,r).conflicts.length);
+const reorder=C.copy(base);reorder.data.placements=[{id:'p1',actionId:'ag1',order:1},{id:'p2',actionId:'ag1',order:2}];l=C.copy(reorder);r=C.copy(reorder);l.data.placements[0].order=2;l.data.placements[1].order=1;r.data.placements[1].doneAt=23;merged=C.merge(reorder,l,r);assert.equal(merged.conflicts.length,0);assert.equal(merged.value.data.placements.find(p=>p.id==='p2').doneAt,23);
+assert.throws(()=>C.validate({...base,data:{...base.data,goals:[goal('g1'),goal('g1')]}}));
+console.log('Sync merge: independent edits, additions, deletions, delete/edit conflicts, completion/reorder and duplicate rejection passed.');

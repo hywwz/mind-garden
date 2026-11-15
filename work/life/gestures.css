@@ -1,0 +1,12 @@
+/* Quiet background; movement is a response to the person using the map. */
+body.simple-ui[data-theme] .ambient-points,body.simple-ui[data-theme] .mote,body.simple-ui[data-theme] .mist{display:none!important;animation:none!important}
+body.simple-ui[data-theme] .semantic-map .graph-node:before{animation:none!important}
+body.simple-ui[data-theme] .gesture-moving-link .graph-line{stroke-width:1.8!important}
+body.simple-ui[data-theme] .semantic-map .graph-node,body.simple-ui[data-theme] .readable-label{cursor:grab;user-select:none;-webkit-user-select:none}
+body.simple-ui[data-theme] .simple-node-menu{max-height:min(304px,calc(100dvh - 200px));scrollbar-width:thin;scrollbar-color:var(--ui-line) transparent;overflow-y:auto;overscroll-behavior:contain}
+body.simple-ui[data-theme] .simple-node-menu button{min-height:38px;padding:8px 12px}
+.simple-menu-group+.simple-menu-group{border-top:1px solid var(--ui-line);margin-top:4px;padding-top:4px}
+body.simple-ui[data-theme] .simple-menu-group .simple-danger{border-top:0;margin-top:0;border-radius:9px}
+.simple-reuse-actions{display:flex;flex-wrap:wrap;column-gap:18px;margin-top:12px}
+.gesture-pause-switch{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:44px;margin:0 0 12px;color:var(--ui-text);font-size:14px}.gesture-pause-switch input[type=checkbox]{width:19px;height:19px;margin:0;accent-color:var(--ui-accent);cursor:pointer}
+body.simple-ui[data-theme] #orbit.is-panning,body.simple-ui[data-theme] #orbit.dragging-branch,body.simple-ui[data-theme] #orbit.is-panning .readable-label,body.simple-ui[data-theme] #orbit.dragging-branch .readable-label,body.simple-ui[data-theme] .graph-node.being-dragged{cursor:grabbing!important}

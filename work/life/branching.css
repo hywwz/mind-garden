@@ -1,0 +1,4 @@
+.branch-disclosure{position:absolute;left:27px;top:1px;display:grid;place-items:center;width:15px;height:15px;border:1px solid var(--ui-line);border-radius:50%;background:var(--ui-solid);color:var(--ui-muted);font:500 12px/1 sans-serif;pointer-events:none}
+body.simple-ui[data-theme] .graph-node[data-branch-state=hint]:before{box-shadow:none!important}
+body.simple-ui[data-theme] .graph-node[data-branch-state=hidden]{pointer-events:none!important}
+body.simple-ui[data-theme] .graph-node[data-branch-state=hint]{cursor:pointer}

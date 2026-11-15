@@ -1,0 +1,11 @@
+package app.mindgarden.personal;
+import android.content.*;import android.database.*;import android.net.Uri;import android.os.*;import android.provider.OpenableColumns;import java.io.*;import org.json.*;
+public class GardenFilesProvider extends ContentProvider {
+ public boolean onCreate(){return true;}
+ private File file(Uri uri)throws FileNotFoundException{String id=uri.getLastPathSegment();if(!BackupArchive.validId(id))throw new FileNotFoundException();File f=new File(getContext().getFilesDir(),"vault/files/"+id);if(!f.isFile())throw new FileNotFoundException();return f;}
+ private JSONObject meta(Uri uri){try{String json=new String(java.nio.file.Files.readAllBytes(new File(getContext().getFilesDir(),"vault/records.json").toPath()),java.nio.charset.StandardCharsets.UTF_8);JSONArray ideas=new JSONObject(json).getJSONArray("ideas");for(int i=0;i<ideas.length();i++){JSONArray fs=ideas.getJSONObject(i).optJSONArray("files");if(fs==null)continue;for(int j=0;j<fs.length();j++)if(fs.getJSONObject(j).optString("id").equals(uri.getLastPathSegment()))return fs.getJSONObject(j);}}catch(Exception ignored){}return new JSONObject();}
+ public String getType(Uri u){return meta(u).optString("type","application/octet-stream");}
+ public ParcelFileDescriptor openFile(Uri u,String mode)throws FileNotFoundException{if(!mode.equals("r"))throw new FileNotFoundException();return ParcelFileDescriptor.open(file(u),ParcelFileDescriptor.MODE_READ_ONLY);}
+ public Cursor query(Uri u,String[] projection,String selection,String[] args,String sort){try{File f=file(u);String[] cols=projection==null?new String[]{OpenableColumns.DISPLAY_NAME,OpenableColumns.SIZE}:projection;MatrixCursor c=new MatrixCursor(cols);Object[] values=new Object[cols.length];for(int i=0;i<cols.length;i++)values[i]=cols[i].equals(OpenableColumns.DISPLAY_NAME)?meta(u).optString("name","文件"):cols[i].equals(OpenableColumns.SIZE)?f.length():null;c.addRow(values);return c;}catch(Exception e){return null;}}
+ public Uri insert(Uri u,ContentValues v){throw new UnsupportedOperationException();}public int delete(Uri u,String s,String[] a){throw new UnsupportedOperationException();}public int update(Uri u,ContentValues v,String s,String[] a){throw new UnsupportedOperationException();}
+}

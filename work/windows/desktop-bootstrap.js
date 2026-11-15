@@ -1,0 +1,4 @@
+window.desktopPending=new Map();window.desktopSeq=0;window.desktopEpoch=0;
+window.desktopCall=(method,payload={})=>new Promise((resolve,reject)=>{const id=++window.desktopSeq;window.desktopPending.set(id,{resolve,reject});chrome.webview.postMessage({id,method,payload,epoch:window.desktopEpoch})});
+chrome.webview.addEventListener('message',event=>{const reply=event.data,pending=window.desktopPending.get(reply.id);if(!pending)return;window.desktopPending.delete(reply.id);reply.error?pending.reject(Error(reply.error)):pending.resolve(reply.result)});
+window.desktopBoot=desktopCall('load').then(result=>{window.desktopEpoch=result.epoch;window.desktopSnapshot=result.snapshot;if(result.snapshot){const metadata={...result.snapshot};delete metadata.attachments;localStorage.setItem('mind-garden-v1',JSON.stringify(metadata))}if(result.error)throw Error(result.error)}).catch(error=>{window.desktopLoadError=error.message;});

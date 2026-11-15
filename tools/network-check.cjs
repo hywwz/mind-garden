@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const M=require('../work/life/model.js'),N=require('../work/life/network-import.js');
+const raw=JSON.parse(fs.readFileSync('examples/练习生活图.json','utf8'));
+const packet=N.convert(raw),original={goals:[],ideas:[],chores:[],placements:[],logs:[],evidence:[]};
+const first=N.merge(original,packet,M),index=M.validate(first.data);
+assert.equal(index.size,7);assert.equal(first.relationsAdded,1);assert.equal(original.goals.length,0);
+assert.deepEqual(N.merge(first.data,packet,M).data,first.data);
+const action=[...index.values()].find(n=>n.record.networkImport.sourceId==='A');
+assert(N.canSchedule(M,first.data,action.id));
+assert.equal([...index.values()].filter(n=>N.canSchedule(M,first.data,n.id)).length,1);
+assert.equal(first.data.placements.length,0);assert.equal(first.data.evidence.length,0);
+assert.equal(action.record.evidenceHint,'保存一份三句话的文案');
+console.log('Synthetic network: paths, cross-branch relation, terminal action, additive import and deduplication passed.');

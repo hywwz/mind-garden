@@ -1,0 +1,83 @@
+{
+  "meta": {
+    "title": "练习：做出一个小作品"
+  },
+  "nodes": [
+    {
+      "id": "R",
+      "level": 1,
+      "title": "做出一个小作品"
+    },
+    {
+      "id": "D",
+      "level": 2,
+      "title": "学会表达想法"
+    },
+    {
+      "id": "G",
+      "level": 3,
+      "title": "做一张介绍卡片"
+    },
+    {
+      "id": "M",
+      "level": 4,
+      "title": "写清内容"
+    },
+    {
+      "id": "P",
+      "level": 5,
+      "title": "准备第一版文案"
+    },
+    {
+      "id": "A",
+      "level": 6,
+      "title": "用三句话介绍作品",
+      "can_add_to_today": true,
+      "duration_minutes": 5,
+      "evidence": "保存一份三句话的文案"
+    },
+    {
+      "id": "D2",
+      "level": 2,
+      "title": "整理自己的作品"
+    }
+  ],
+  "edges": [
+    {
+      "source": "R",
+      "target": "D",
+      "kind": "decomposes"
+    },
+    {
+      "source": "D",
+      "target": "G",
+      "kind": "decomposes"
+    },
+    {
+      "source": "G",
+      "target": "M",
+      "kind": "decomposes"
+    },
+    {
+      "source": "M",
+      "target": "P",
+      "kind": "decomposes"
+    },
+    {
+      "source": "P",
+      "target": "A",
+      "kind": "decomposes"
+    },
+    {
+      "source": "R",
+      "target": "D2",
+      "kind": "decomposes"
+    },
+    {
+      "source": "G",
+      "target": "D2",
+      "kind": "supports",
+      "reason": "同一个作品也能用于整理作品集"
+    }
+  ]
+}

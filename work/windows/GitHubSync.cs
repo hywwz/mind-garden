@@ -1,0 +1,34 @@
+using System;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+namespace MindGarden {
+public sealed class GitHubSync {
+ readonly GardenStore store;readonly HttpClient client;readonly string api;
+ public GitHubSync(GardenStore owner,HttpMessageHandler handler=null,string testApi=null){store=owner;ServicePointManager.SecurityProtocol|=SecurityProtocolType.Tls12;client=handler==null?new HttpClient(new HttpClientHandler{AllowAutoRedirect=false}):new HttpClient(handler);client.Timeout=TimeSpan.FromSeconds(40);client.MaxResponseContentBufferSize=40*1024*1024;api=testApi??"https://api.github.com";}
+ string ConfigPath {get{return Path.Combine(store.Root,"github-connection.bin");}}
+ public string SafetyPath(string side){return Path.Combine(store.Root,side=="other"?"sync-other.json":"sync-before.json");}
+ Dictionary<string,object> Config(){if(!File.Exists(ConfigPath))return null;try{return GardenStore.Parse(Encoding.UTF8.GetString(ProtectedData.Unprotect(File.ReadAllBytes(ConfigPath),null,DataProtectionScope.CurrentUser)));}catch{throw new IOException("同步连接需要重新设置");}}
+ public object Status(){var c=Config();return new{configured=c!=null,owner=c==null?"":GardenStore.Text(c,"owner"),repo=c==null?"":GardenStore.Text(c,"repo"),before=File.Exists(SafetyPath("before")),other=File.Exists(SafetyPath("other"))};}
+ static void Identity(Dictionary<string,object> c){if(!Regex.IsMatch(GardenStore.Text(c,"owner"),@"^[A-Za-z0-9][A-Za-z0-9-]{0,38}$")||!Regex.IsMatch(GardenStore.Text(c,"repo"),@"^[A-Za-z0-9_.-]{1,100}$")||GardenStore.Text(c,"repo")=="."||GardenStore.Text(c,"repo")==".."||String.IsNullOrWhiteSpace(GardenStore.Text(c,"token")))throw new IOException("请填 GitHub 用户名、仓库名和连接密钥");}
+ async Task<Tuple<int,byte[]>> Request(Dictionary<string,object> c,string method,string suffix,object body=null,bool raw=false){Identity(c);string url=api+"/repos/"+Uri.EscapeDataString(GardenStore.Text(c,"owner"))+"/"+Uri.EscapeDataString(GardenStore.Text(c,"repo"))+suffix;using(var request=new HttpRequestMessage(new HttpMethod(method),url)){request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",GardenStore.Text(c,"token"));request.Headers.UserAgent.ParseAdd("MindGarden-Personal/1.2");request.Headers.Accept.ParseAdd(raw?"application/vnd.github.raw+json":"application/vnd.github+json");request.Headers.Add("X-GitHub-Api-Version","2022-11-28");if(body!=null)request.Content=new StringContent(GardenStore.Json(body),Encoding.UTF8,"application/json");try{using(var response=await client.SendAsync(request)){int status=(int)response.StatusCode;if(status==401)throw new IOException("连接密钥已失效，请重新设置");if(status==403||status==429)throw new IOException("GitHub 暂时限制访问，或密钥没有读写权限，请稍后重试");if(status>=500)throw new IOException("GitHub 暂时不可用，内容已保留在本机");return Tuple.Create(status,await response.Content.ReadAsByteArrayAsync());}}catch(TaskCanceledException){throw new IOException("连接超时，内容已保留在本机，稍后会重试");}catch(HttpRequestException){throw new IOException("暂时连不上 GitHub，内容已保留在本机");}}}
+ async Task Private(Dictionary<string,object> c){var response=await Request(c,"GET","");if(response.Item1!=200)throw new IOException("没有找到仓库，请检查名称和密钥授权");var repo=GardenStore.Parse(Encoding.UTF8.GetString(response.Item2));object hidden;if(!repo.TryGetValue("private",out hidden)||!(hidden is bool)||!(bool)hidden)throw new IOException("请使用私有仓库，保护你的生活记录");object p;if(repo.TryGetValue("permissions",out p)){object push;if(GardenStore.Map(p).TryGetValue("push",out push)&&push is bool&&!(bool)push)throw new IOException("密钥需要这个仓库的 Contents 读写权限");}}
+ public async Task<object> Call(Dictionary<string,object> p){string action=GardenStore.Text(p,"action");
+  if(action=="status")return Status();if(action=="disconnect"){if(File.Exists(ConfigPath))File.Delete(ConfigPath);return Status();}
+  if(action=="safety"){var snapshot=GardenStore.Map(p["snapshot"]);GardenStore.Validate(snapshot);GardenStore.AtomicWrite(SafetyPath(GardenStore.Text(p,"side")),GardenStore.Json(snapshot));return true;}
+  if(action=="configure"){var old=Config();var c=new Dictionary<string,object>{{"owner",GardenStore.Text(p,"owner").Trim()},{"repo",GardenStore.Text(p,"repo").Trim()},{"token",GardenStore.Text(p,"token").Trim()}};if(GardenStore.Text(c,"token")==""&&old!=null&&GardenStore.Text(old,"owner")==GardenStore.Text(c,"owner")&&GardenStore.Text(old,"repo")==GardenStore.Text(c,"repo"))c["token"]=old["token"];Identity(c);await Private(c);byte[] encrypted=ProtectedData.Protect(Encoding.UTF8.GetBytes(GardenStore.Json(c)),null,DataProtectionScope.CurrentUser);string temp=ConfigPath+".tmp";File.WriteAllBytes(temp,encrypted);if(File.Exists(ConfigPath))File.Replace(temp,ConfigPath,null);else File.Move(temp,ConfigPath);return Status();}
+  var current=Config();if(current==null)throw new IOException("请先连接 GitHub");if(action=="verify"){await Private(current);return true;}
+  string key=GardenStore.Text(p,"key");bool state=action=="getState"||action=="putState";if(!state&&!Regex.IsMatch(key,@"^[a-f0-9]{64}$"))throw new IOException("附件编号无效");string suffix="/contents/mind-garden/"+(state?"state.json":"attachments/"+key);
+  if(action=="getState"){var response=await Request(current,"GET",suffix);if(response.Item1==404)return new{status=404};if(response.Item1!=200)throw new IOException("云端内容暂时没有读完整");var value=GardenStore.Parse(Encoding.UTF8.GetString(response.Item2));string content=GardenStore.Text(value,"content");if(content==""){var raw=await Request(current,"GET",suffix,null,true);if(raw.Item1!=200||raw.Item2.Length>16*1024*1024)throw new IOException("云端内容没有读完整");content=Convert.ToBase64String(raw.Item2);}return new{status=200,sha=GardenStore.Text(value,"sha"),content=content};}
+  if(action=="getFile"){var response=await Request(current,"GET",suffix,null,true);return new{status=response.Item1,content=response.Item1==200?Convert.ToBase64String(response.Item2):""};}
+  if(action=="putState"||action=="putFile"){await Private(current);string content=GardenStore.Text(p,"content");if(content.Length>30*1024*1024)throw new IOException("同步文件过大");var body=new Dictionary<string,object>{{"message","Sync Mind Garden"},{"content",content}};string sha=GardenStore.Text(p,"sha");if(sha!=""){if(!Regex.IsMatch(sha,@"^[a-f0-9]{40,64}$"))throw new IOException("云端版本无效");body["sha"]=sha;}var response=await Request(current,"PUT",suffix,body);if(response.Item1==409||response.Item1==422)return new{status=response.Item1};if(response.Item1!=200&&response.Item1!=201)throw new IOException("未能上传，请检查仓库授权");var value=GardenStore.Parse(Encoding.UTF8.GetString(response.Item2));return new{status=response.Item1,sha=GardenStore.Text(GardenStore.Map(value["content"]),"sha")};}
+  throw new IOException("没有找到同步操作");
+ }
+}
+}
