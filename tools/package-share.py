@@ -10,7 +10,7 @@ for name in names:
     shutil.copy2(ROOT/'outputs'/name,DEST/name)
 hashes='\n'.join(hashlib.sha256((DEST/name).read_bytes()).hexdigest()+'  '+name for name in names)+'\n'
 (DEST/'SHA256.txt').write_text(hashes,encoding='utf-8')
-archive=DEST/'心之林-分享包-1.13.2.zip'
+archive=DEST/'心之林-分享包-1.13.3.zip'
 with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as z:
     for name in names+['先看这里.txt','SHA256.txt']:
         z.write(DEST/name,name)
