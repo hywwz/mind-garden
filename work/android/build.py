@@ -4,10 +4,10 @@ ROOT=Path(__file__).resolve().parent
 WORK=ROOT/'build';WORK.mkdir(exist_ok=True)
 OUT=ROOT.parents[1]/'outputs';OUT.mkdir(exist_ok=True)
 HB=Path(os.environ.get('MIND_GARDEN_HBUILDER_PLUGINS','B:/Development Tools/HBuilderX/plugins'))
-JAVA=Path(os.environ.get('MIND_GARDEN_JAVA_BIN','B:/Development Tools/jdk-17.0.2/bin'))
+JAVA=Path(os.environ.get('MIND_GARDEN_JAVA_BIN','C:/Program Files/Java/jdk-21.0.11/bin'))
 ANDROID=HB/'uniapp-runextension/lib/android_36.jar'
 AAPT=HB/'uts-development-android/static/win/aapt2.exe'
-R8=HB/'uniapp-runextension/utsServer_jar/r8-8.10.21.jar'
+R8=ROOT/'vendor/voice/r8-9.5.32.jar'
 SIGNER=HB/'app-safe-pack/apksigner.jar'
 ALIGN=HB/'app-safe-pack/zipalign/zipalign.exe'
 def run(*args):
@@ -36,22 +36,34 @@ font=ROOT/'GardenSans.otf'
 if not font.exists():shutil.copyfile('C:/Windows/Fonts/Noto Sans SC (TrueType).otf',font)
 shutil.copyfile(font,assets/'GardenSans.otf')
 shutil.copyfile(ROOT/'FONT-LICENSE.txt',assets/'FONT-LICENSE.txt')
+for source,name in [('THIRD_PARTY_NOTICES.md','VOICE-NOTICES.txt'),('APACHE-2.0.txt','APACHE-2.0.txt'),('upstream/LICENSE','VOICE-PARSER-LICENSE.txt')]:
+    shutil.copyfile(ROOT/'voice'/source,assets/name)
 (assets/'index.html').write_text(html,encoding='utf-8')
 (WORK/'asset-script.js').write_text(html[html.index('(() => {'):html.rindex('</script>')],encoding='utf-8')
 run('node','--check',WORK/'asset-script.js')
 run(AAPT,'compile','--dir',ROOT/'res','-o',WORK/'resources.zip')
 gen=WORK/'gen';gen.mkdir(exist_ok=True)
-run(AAPT,'link','-I',HB/'uts-development-android/static/android.jar','--manifest',ROOT/'AndroidManifest.xml','-o',WORK/'resources.apk','--java',gen,'-A',assets,WORK/'resources.zip')
+run(AAPT,'link','--warn-manifest-validation','-I',HB/'uts-development-android/static/android.jar','--manifest',ROOT/'AndroidManifest.xml','-o',WORK/'resources.apk','--java',gen,'-A',assets,WORK/'resources.zip')
 classes=WORK/'classes';classes.mkdir(exist_ok=True)
+vendor=ROOT/'vendor/voice'
+runtime=sorted(p for p in vendor.glob('*.jar') if not p.name.startswith('r8-'))
+if not R8.is_file():raise SystemExit('Run python tools/fetch-voice-build-tools.py before the Android build')
+if not (vendor/'litertlm-android-0.19.0-classes.jar').exists():raise SystemExit('Run python tools/fetch-voice-sdk.py before the Android build')
+kotlin=HB/'uniapp-runextension/kotlinc/lib'
+datejar=WORK/'voice-dates.jar'
+run(JAVA/'java.exe','-cp',str(kotlin/'*'),'org.jetbrains.kotlin.cli.jvm.K2JVMCompiler','-no-stdlib','-no-reflect','-jvm-target','17','-classpath',str(kotlin/'kotlin-stdlib.jar'),'-d',datejar,*sorted((ROOT/'voice').rglob('*.kt')))
+runtime.append(datejar)
 sources=list((ROOT/'src').rglob('*.java'))+list(gen.rglob('*.java'))
-run(JAVA/'javac.exe','-encoding','UTF-8','-source','8','-target','8','-Xlint:-options','-classpath',ANDROID,'-d',classes,*sources)
+run(JAVA/'javac.exe','-encoding','UTF-8','-source','8','-target','8','-Xlint:-options','-classpath',os.pathsep.join(map(str,[ANDROID]+runtime)),'-d',classes,*sources)
 jar=WORK/'classes.jar'
 with zipfile.ZipFile(jar,'w',zipfile.ZIP_DEFLATED) as z:
     for p in (classes/'app').rglob('*.class'):z.write(p,p.relative_to(classes).as_posix())
 dex=WORK/'dex';dex.mkdir(exist_ok=True)
-run(JAVA/'java.exe','-cp',R8,'com.android.tools.r8.D8','--release','--min-api','26','--lib',ANDROID,'--output',dex,jar)
+run(JAVA/'java.exe','-cp',R8,'com.android.tools.r8.D8','--release','--min-api','26','--lib',ANDROID,'--output',dex,jar,*runtime)
 unsigned=WORK/'unsigned.apk';shutil.copyfile(WORK/'resources.apk',unsigned)
-with zipfile.ZipFile(unsigned,'a',zipfile.ZIP_DEFLATED) as z:z.write(dex/'classes.dex','classes.dex')
+with zipfile.ZipFile(unsigned,'a',zipfile.ZIP_DEFLATED) as z:
+    for p in sorted(dex.glob('classes*.dex')):z.write(p,p.name)
+    for p in sorted((vendor/'jni').rglob('*.so')):z.write(p,'lib/'+p.relative_to(vendor/'jni').as_posix())
 aligned=WORK/'aligned.apk';run(ALIGN,'-f','4',unsigned,aligned)
 keys=ROOT/'signing';keys.mkdir(exist_ok=True)
 password_file=keys/'password.txt';key=keys/'mind-garden.p12'
@@ -62,12 +74,13 @@ run(JAVA/'java.exe','-jar',SIGNER,'sign','--ks',key,'--ks-key-alias','mindgarden
 run(JAVA/'java.exe','-jar',SIGNER,'verify','--verbose',apk)
 run(AAPT,'dump','badging',apk)
 with zipfile.ZipFile(OUT/'心之林-安卓项目.zip','w',zipfile.ZIP_DEFLATED) as z:
-    for folder in ['src','res','assets']:
+    for folder in ['src','res','assets','voice']:
         for p in (ROOT/folder).rglob('*'):
             if p.is_file():z.write(p,p.relative_to(ROOT).as_posix())
     for name in ['AndroidManifest.xml','phone.js','phone-bootstrap.js','phone.css','phone-layout.js','mobile-layout.css','GardenSans.otf','FONT-LICENSE.txt','build.py']:
         z.write(ROOT/name,name)
     z.write(web_source,'web-source.html')
+    z.write(ROOT.parents[1]/'tools/fetch-voice-sdk.py','tools/fetch-voice-sdk.py')
     for p in SYNC.iterdir():
         if p.is_file():z.write(p,'sync/'+p.name)
 print('Built:',apk)

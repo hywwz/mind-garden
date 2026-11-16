@@ -48,6 +48,10 @@
 !/work/life/network-focus.js
 !/work/life/browse.js
 !/work/life/tree.js
+!/work/life/capture-core.js
+!/work/life/capture-ui.js
+!/work/life/capture.css
+!/work/life/capture-check.cjs
 !/work/life/style.css
 !/work/life/simple.css
 !/work/life/gestures.css
@@ -58,6 +62,7 @@
 !/work/life/tree.css
 /work/android/*
 !/work/android/src/
+!/work/android/voice/
 !/work/android/res/
 !/work/android/AndroidManifest.xml
 !/work/android/build.py

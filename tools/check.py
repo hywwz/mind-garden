@@ -4,7 +4,7 @@ import re, subprocess, sys, tempfile
 
 ROOT=Path(__file__).resolve().parents[1]
 subprocess.run([sys.executable,str(ROOT/'tools/build.py'),'--web'],cwd=ROOT,check=True)
-for script in ['work/life/model-check.cjs','work/sync/core-check.cjs','work/sync/engine-check.cjs','tools/network-check.cjs']:
+for script in ['work/life/model-check.cjs','work/life/capture-check.cjs','work/sync/core-check.cjs','work/sync/engine-check.cjs','tools/network-check.cjs']:
     subprocess.run(['node',script],cwd=ROOT,check=True)
 for source in (ROOT/'web/dist').glob('*.js'):
     subprocess.run(['node','--check',str(source)],cwd=ROOT,check=True)

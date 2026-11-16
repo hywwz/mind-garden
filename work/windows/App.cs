@@ -16,8 +16,8 @@ using Microsoft.Win32;
 
 [assembly:System.Reflection.AssemblyTitle("心之林")]
 [assembly:System.Reflection.AssemblyDescription("慢慢靠近，你想要的生活。")]
-[assembly:System.Reflection.AssemblyVersion("1.13.3.0")]
-[assembly:System.Reflection.AssemblyFileVersion("1.13.3.0")]
+[assembly:System.Reflection.AssemblyVersion("1.14.0.0")]
+[assembly:System.Reflection.AssemblyFileVersion("1.14.0.0")]
 namespace MindGarden {
 public sealed class GardenWindow:Window {
     readonly GardenStore store; readonly GitHubSync github; readonly string assets,debugPort; readonly WebView2 browser;
