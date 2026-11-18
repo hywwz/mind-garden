@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Diagnostics;
 
 [assembly:AssemblyTitle("心之林安装")]
-[assembly:AssemblyVersion("1.14.0.0")]
+[assembly:AssemblyVersion("1.15.0.0")]
 static class Installer {
     [STAThread] static void Main() {
         Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);

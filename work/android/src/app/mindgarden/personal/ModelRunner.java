@@ -27,11 +27,15 @@ final class ModelRunner implements AutoCloseable {
   engine.initialize();
  }
  String run(File model,String instruction,String input,File audio)throws Exception {
+  return runInternal(model,instruction,input,audio,audio==null);
+ }
+ String chat(File model,String instruction,String input)throws Exception{return runInternal(model,instruction,input,null,false);}
+ private String runInternal(File model,String instruction,String input,File audio,boolean structured)throws Exception{
   load(model);
-  ConversationConfig config=new ConversationConfig(Contents.Companion.of(instruction),Collections.emptyList(),Collections.emptyList(),new SamplerConfig(32,.9,.1,42),false,Collections.emptyList(),Collections.emptyMap(),null,false,4096,new ThinkingConfig(false),audio==null);
+  ConversationConfig config=new ConversationConfig(Contents.Companion.of(instruction),Collections.emptyList(),Collections.emptyList(),new SamplerConfig(32,.9,.1,42),false,Collections.emptyList(),Collections.emptyMap(),null,false,4096,new ThinkingConfig(false),structured);
   try(Conversation conversation=engine.createConversation(config)){
    active=conversation;
-   Message result=audio==null?conversation.sendMessage(input,Collections.emptyMap(),null,null,null,null,new ThinkingConfig(false),ResponseFormat.json(schema())):conversation.sendMessage(Contents.Companion.of(new Content.Text(input),new Content.AudioFile(audio.getAbsolutePath())));
+   Message result=audio==null&&!structured?conversation.sendMessage(input):audio==null?conversation.sendMessage(input,Collections.emptyMap(),null,null,null,null,new ThinkingConfig(false),ResponseFormat.json(schema())):conversation.sendMessage(Contents.Companion.of(new Content.Text(input),new Content.AudioFile(audio.getAbsolutePath())));
    StringBuilder text=new StringBuilder();
    for(Content part:result.getContents().getContents())if(part instanceof Content.Text)text.append(((Content.Text)part).getText());
    String value=text.toString().trim();

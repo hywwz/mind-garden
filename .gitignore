@@ -51,6 +51,10 @@
 !/work/life/capture-core.js
 !/work/life/capture-ui.js
 !/work/life/capture.css
+!/work/life/treehole-core.js
+!/work/life/treehole-ui.js
+!/work/life/treehole.css
+!/work/life/treehole-check.cjs
 !/work/life/capture-check.cjs
 !/work/life/style.css
 !/work/life/simple.css

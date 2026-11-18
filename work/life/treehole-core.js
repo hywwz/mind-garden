@@ -1,0 +1,7 @@
+(function(root){
+'use strict';
+function thread(id,now){return{id,title:'树洞',text:'树洞',kind:'树洞',treehole:true,created:now,updated:now,blocks:[],files:[],actions:[]}}
+function append(t,entry){if(!t.treehole)throw Error('不是树洞记录');if(t.blocks.some(b=>b.id===entry.id))return false;if(!['text','audio','reply','summary'].includes(entry.type))throw Error('内容类型不正确');if(entry.type==='audio'&&!t.files.some(f=>f.id===entry.fileId))throw Error('录音尚未保存');if(entry.type!=='audio'&&!entry.text?.trim())throw Error('先写一点内容');t.blocks.push({...entry});t.updated=entry.created;if(t.title==='树洞'&&entry.type==='text')t.title=entry.text.trim().slice(0,22);return true}
+function context(t){const entries=t.blocks.map(b=>({role:['reply','summary'].includes(b.type)?'assistant':'user',text:b.type==='audio'?b.transcript||'［这段录音尚未转文字］':b.text||''}));let length=0,result=[],truncated=false;for(let i=entries.length-1;i>=0;i--){if(length+entries[i].text.length>10000){if(!result.length){result.unshift({...entries[i],text:entries[i].text.slice(-10000)});truncated=true}break}result.unshift(entries[i]);length+=entries[i].text.length}return{entries:result,omitted:entries.length-result.length+(truncated?1:0),untranscribed:t.blocks.filter(b=>b.type==='audio'&&!b.transcript).map(b=>b.id)}}
+const api={thread,append,context};root.GardenTreehole=api;if(typeof module!=='undefined'&&module.exports)module.exports=api;
+})(typeof globalThis!=='undefined'?globalThis:this);
